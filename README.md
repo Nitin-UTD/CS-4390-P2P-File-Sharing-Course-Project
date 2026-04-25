@@ -20,28 +20,12 @@ This repository now contains a complete, runnable tracker + peer implementation 
 make
 ```
 
-## Config files (included)
-
-- `tracker.conf`
-  - `PORT=3490`
-  - `DB_DIR=tracker_db`
-- `peer.conf`
-  - `TRACKER_IP=127.0.0.1`
-  - `TRACKER_PORT=3490`
-
-You can now run using either direct host/port args or config file mode:
-
-```bash
-./tracker tracker.conf
-./peer peer.conf list
-```
-
 ## Run demo end-to-end
 
 ### Terminal 1: start tracker
 
 ```bash
-./tracker tracker.conf
+./tracker 3490 tracker_db
 ```
 
 ### Terminal 2: start peer file server for shared files
@@ -75,14 +59,6 @@ cp /path/to/your/testfile.txt peer1_shared/
 ```bash
 ./peer download testfile.track downloaded_testfile.txt
 ```
-
-## One-command demonstration script
-
-```bash
-./demo.sh
-```
-
-This script builds, starts services, creates tracking metadata, lists files, fetches `.track`, downloads content from a peer, and verifies integrity.
 
 ## Protocol summary
 

@@ -17,15 +17,7 @@ static int compute_md5(const char *path, char out[MAX_MD5]) {
     }
     if (!fgets(out, MAX_MD5, fp)) {
         pclose(fp);
-        snprintf(cmd, sizeof(cmd), "md5 -q '%s' 2>/dev/null", path);
-        fp = popen(cmd, "r");
-        if (!fp) {
-            return -1;
-        }
-        if (!fgets(out, MAX_MD5, fp)) {
-            pclose(fp);
-            return -1;
-        }
+        return -1;
     }
     pclose(fp);
     for (int i = 0; out[i]; i++) {
@@ -34,34 +26,6 @@ static int compute_md5(const char *path, char out[MAX_MD5]) {
             break;
         }
     }
-    return 0;
-}
-
-static int parse_peer_config(const char *path, char ip[64], int *port) {
-    FILE *fp = fopen(path, "r");
-    if (!fp) {
-        return -1;
-    }
-    char line[MAX_LINE];
-    while (fgets(line, sizeof(line), fp)) {
-        trim_newline(line);
-        if (line[0] == '#' || line[0] == '\0') {
-            continue;
-        }
-        char *eq = strchr(line, '=');
-        if (!eq) {
-            continue;
-        }
-        *eq = '\0';
-        char *key = line;
-        char *val = eq + 1;
-        if (strcmp(key, "TRACKER_IP") == 0) {
-            snprintf(ip, 64, "%s", val);
-        } else if (strcmp(key, "TRACKER_PORT") == 0) {
-            *port = atoi(val);
-        }
-    }
-    fclose(fp);
     return 0;
 }
 
@@ -367,16 +331,12 @@ static void usage(const char *prog) {
     fprintf(stderr,
             "Usage:\n"
             "  %s <tracker_ip> <tracker_port> list\n"
-            "  %s <peer.conf> list\n"
             "  %s <tracker_ip> <tracker_port> createtracker <file_path> <description> <my_ip> <my_port>\n"
-            "  %s <peer.conf> createtracker <file_path> <description> <my_ip> <my_port>\n"
             "  %s <tracker_ip> <tracker_port> updatetracker <filename> <my_ip> <my_port>\n"
-            "  %s <peer.conf> updatetracker <filename> <my_ip> <my_port>\n"
             "  %s <tracker_ip> <tracker_port> get <filename> <output_track_file>\n"
-            "  %s <peer.conf> get <filename> <output_track_file>\n"
             "  %s serve <shared_dir> <port>\n"
             "  %s download <track_file> <dest_path>\n",
-            prog, prog, prog, prog, prog, prog, prog, prog, prog, prog);
+            prog, prog, prog, prog, prog, prog);
 }
 
 int main(int argc, char *argv[]) {
@@ -401,58 +361,41 @@ int main(int argc, char *argv[]) {
         return command_download(argv[2], argv[3]);
     }
 
-    if (argc < 3) {
+    if (argc < 4) {
         usage(argv[0]);
         return 1;
     }
-    char tracker_ip_buf[64] = {0};
-    const char *tracker_ip = NULL;
-    int tracker_port = 0;
-    int cmd_index = 3;
 
-    if (strstr(argv[1], ".conf") != NULL) {
-        if (parse_peer_config(argv[1], tracker_ip_buf, &tracker_port) != 0 || tracker_ip_buf[0] == '\0' || tracker_port == 0) {
-            fprintf(stderr, "Invalid peer config: %s\n", argv[1]);
-            return 1;
-        }
-        tracker_ip = tracker_ip_buf;
-        cmd_index = 2;
-    } else {
-        if (argc < 4) {
-            usage(argv[0]);
-            return 1;
-        }
-        tracker_ip = argv[1];
-        tracker_port = atoi(argv[2]);
-    }
-    const char *cmd = argv[cmd_index];
+    const char *tracker_ip = argv[1];
+    int tracker_port = atoi(argv[2]);
+    const char *cmd = argv[3];
 
     if (strcmp(cmd, "list") == 0) {
         return command_list(tracker_ip, tracker_port);
     }
 
     if (strcmp(cmd, "createtracker") == 0) {
-        if (argc != cmd_index + 5) {
+        if (argc != 8) {
             usage(argv[0]);
             return 1;
         }
-        return command_create(tracker_ip, tracker_port, argv[cmd_index + 1], argv[cmd_index + 2], argv[cmd_index + 3], atoi(argv[cmd_index + 4]));
+        return command_create(tracker_ip, tracker_port, argv[4], argv[5], argv[6], atoi(argv[7]));
     }
 
     if (strcmp(cmd, "updatetracker") == 0) {
-        if (argc != cmd_index + 4) {
+        if (argc != 7) {
             usage(argv[0]);
             return 1;
         }
-        return command_update(tracker_ip, tracker_port, argv[cmd_index + 1], argv[cmd_index + 2], atoi(argv[cmd_index + 3]));
+        return command_update(tracker_ip, tracker_port, argv[4], argv[5], atoi(argv[6]));
     }
 
     if (strcmp(cmd, "get") == 0) {
-        if (argc != cmd_index + 3) {
+        if (argc != 6) {
             usage(argv[0]);
             return 1;
         }
-        return command_get(tracker_ip, tracker_port, argv[cmd_index + 1], argv[cmd_index + 2]);
+        return command_get(tracker_ip, tracker_port, argv[4], argv[5]);
     }
 
     usage(argv[0]);

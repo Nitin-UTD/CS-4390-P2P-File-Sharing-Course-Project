@@ -25,35 +25,6 @@ static void safe_copy(char *dst, size_t dst_sz, const char *src) {
     snprintf(dst, dst_sz, "%s", src);
 }
 
-static int parse_tracker_config(const char *path, int *port_out, char *db_dir_out, size_t db_dir_out_sz) {
-    FILE *fp = fopen(path, "r");
-    if (!fp) {
-        return -1;
-    }
-
-    char line[MAX_LINE];
-    while (fgets(line, sizeof(line), fp)) {
-        trim_newline(line);
-        if (line[0] == '#' || line[0] == '\0') {
-            continue;
-        }
-        char *eq = strchr(line, '=');
-        if (!eq) {
-            continue;
-        }
-        *eq = '\0';
-        char *key = line;
-        char *val = eq + 1;
-        if (strcmp(key, "PORT") == 0) {
-            *port_out = atoi(val);
-        } else if (strcmp(key, "DB_DIR") == 0) {
-            safe_copy(db_dir_out, db_dir_out_sz, val);
-        }
-    }
-    fclose(fp);
-    return 0;
-}
-
 static int find_file(const char *filename) {
     for (int i = 0; i < g_file_count; i++) {
         if (strcmp(g_files[i].filename, filename) == 0) {
@@ -247,17 +218,10 @@ static void handle_client(int cfd) {
 int main(int argc, char *argv[]) {
     int port = 3490;
     if (argc >= 2) {
-        if (strchr(argv[1], '=') == NULL && strstr(argv[1], ".conf") != NULL) {
-            if (parse_tracker_config(argv[1], &port, g_db_dir, sizeof(g_db_dir)) != 0) {
-                fprintf(stderr, "Failed to read tracker config file: %s\n", argv[1]);
-                return 1;
-            }
-        } else {
-            port = atoi(argv[1]);
-            if (argc >= 3) {
-                safe_copy(g_db_dir, sizeof(g_db_dir), argv[2]);
-            }
-        }
+        port = atoi(argv[1]);
+    }
+    if (argc >= 3) {
+        safe_copy(g_db_dir, sizeof(g_db_dir), argv[2]);
     }
 
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
